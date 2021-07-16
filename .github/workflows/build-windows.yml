@@ -1,0 +1,127 @@
+name: Build python-libzim on Windows
+
+on: workflow_dispatch
+
+jobs:
+  build-libzim:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout kiwix-build
+        uses: actions/checkout@v2
+        with:
+          repository: 'dylanmccall/kiwix-build'
+          ref: 'r_20-windows'
+
+      - name: Install kiwix-build dependencies
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt install python3-setuptools python3-pip qt5-qmake qt5-default
+
+      - name: Install kiwix-build modile
+        run: |
+          pip3 install .
+          pip3 install meson ninja --upgrade
+
+      - name: Run kiwix-build
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          kiwix-build --make-release --target-platform win32_dyn libzim
+      
+      - name: List files
+        run: |
+          ls -lR .
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: 'libzim-bin'
+          path: 'BUILD_win32_dyn/INSTALL/bin'
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: 'libzim-include'
+          path: 'BUILD_win32_dyn/INSTALL/include'
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: 'libzim-lib-bin'
+          path: 'BUILD_win32_dyn/INSTALL/lib/bin'
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: 'libzim-lib'
+          path: 'BUILD_win32_dyn/INSTALL/lib/x86_64-linux-gnu'
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: 'libzim-share'
+          path: 'BUILD_win32_dyn/INSTALL/share'
+
+  build-python-libzim:
+    runs-on: windows-2019
+    needs: build-libzim
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: 'libzim-bin'
+          path: 'lib'
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: 'libzim-lib'
+          path: 'lib'
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: 'libzim-lib-bin'
+          path: 'lib'
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: 'libzim-include'
+          path: 'include/'
+
+      - name: Add mingw32 to path
+        run: |
+          echo "C:\msys64\mingw32\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Setup python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade "cython>=0.29.20,<3.0" setuptools pip wheel
+
+      # https://stackoverflow.com/questions/34911959/cython-error-c-python27-libs-libpython27-a-error-adding-symbols
+      - name: Generate python37 library files
+        run: |
+          cd  C:\hostedtoolcache\windows\Python\3.7.9\x64
+          gendef python37.dll
+          dlltool -U -d python37.def -l libpython37.dll.a
+          cp libpython37.dll.a libs\libpython37.dll.a
+          cp libpython37.dll.a libs\python37.dll.a
+
+      # Via https://bugs.python.org/issue25251 and assorted awfulness
+      - name: Generate vcruntime140 library files
+        run: |
+          cd  C:\hostedtoolcache\windows\Python\3.7.9\x64
+          pexports vcruntime140.dll >libs\vcruntime140.def
+          dlltool -dllname vcruntime140.dll --def libs\vcruntime140.def --output-lib libs\libvcruntime140.a
+
+      - name: Generate C extension
+        run: |
+          python3 setup.py build_ext --compiler=mingw32
+
+      - name: build wheel
+        run: python3 setup.py bdist_wheel
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: ./dist

@@ -32,6 +32,10 @@ import platform
 from pathlib import Path
 from ctypes.util import find_library
 
+from distutils import cygwinccompiler
+# Monkey-patch get_msvcr to support use vcruntime140 for MS Compiler version 1900
+cygwinccompiler.get_msvcr = lambda: ['vcruntime140']
+
 from setuptools import setup, Extension
 from Cython.Build import cythonize
 from Cython.Distutils.build_ext import new_build_ext as build_ext
@@ -40,8 +44,12 @@ GITHUB_URL = "https://github.com/openzim/python-libzim"
 BASE_DIR = Path(__file__).parent
 LIBZIM_INCLUDE_DIR = 'include'   # the libzim C++ header src dir (containing zim/*.h)
 LIBZIM_LIBRARY_DIR = 'lib'       # the libzim .so binary lib dir (containing libzim.so)
-LIBZIM_DYLIB = 'libzim.{ext}'.format(ext='dylib' if platform.system() == 'Darwin' else 'so')
-
+if platform.system() == "Darwin":
+    LIBZIM_DYLIB = "libzim.dylib"
+elif platform.system() == "Windows":
+    LIBZIM_DYLIB = "libzim-6.dll"
+else:
+    LIBZIM_DYLIB = "libzim.so"
 
 class fixed_build_ext(build_ext):
     """Workaround for rpath bug in distutils for OSX."""
@@ -79,13 +87,19 @@ if not ((BASE_DIR / LIBZIM_LIBRARY_DIR / LIBZIM_DYLIB).exists() or find_library(
 def get_long_description():
     return (BASE_DIR/'README.md').read_text()
 
+if platform.system() == "Windows":
+    # EXTENSION_EXTRA_COMPILE_ARGS = ["/std:c++14"]
+    EXTENSION_EXTRA_COMPILE_ARGS = ["-std=c++11"]
+else:
+    EXTENSION_EXTRA_COMPILE_ARGS = ["-std=c++11", "-Wall", "-Wextra"]
+
 wrapper_extension = Extension(
     name = "libzim.wrapper",
     sources = ["libzim/wrapper.pyx", "libzim/lib.cxx"],
     include_dirs=["libzim", LIBZIM_INCLUDE_DIR],
-    libraries=['zim'],
+    libraries=['zim-6'],
     library_dirs=[LIBZIM_LIBRARY_DIR],
-    extra_compile_args=["-std=c++11", "-Wall", "-Wextra"],
+    extra_compile_args=EXTENSION_EXTRA_COMPILE_ARGS,
     language="c++",
 )
 
