@@ -41,9 +41,12 @@ GITHUB_URL = "https://github.com/openzim/python-libzim"
 BASE_DIR = Path(__file__).parent
 LIBZIM_INCLUDE_DIR = "include"  # the libzim C++ header src dir (containing zim/*.h)
 LIBZIM_LIBRARY_DIR = "lib"  # the libzim .so binary lib dir (containing libzim.so)
-LIBZIM_DYLIB = "libzim.{ext}".format(
-    ext="dylib" if platform.system() == "Darwin" else "so"
-)
+if platform.system() == "Darwin":
+    LIBZIM_DYLIB = "libzim.dylib"
+elif platform.system() == "Windows":
+    LIBZIM_DYLIB = "libzim.a"
+else:
+    LIBZIM_DYLIB = "libzim.so"
 # set PROFILE env to `1` to enable profile info on build (used for coverage reporting)
 PROFILE = os.getenv("PROFILE", "") == "1"
 
@@ -86,13 +89,18 @@ def get_long_description():
     return (BASE_DIR / "README.md").read_text()
 
 
+if platform.system() == "Windows":
+    EXTENSION_EXTRA_COMPILE_ARGS = ["/std:c++14"]
+else:
+    EXTENSION_EXTRA_COMPILE_ARGS = ["-std=c++11", "-Wall", "-Wextra"]
+
 wrapper_extension = Extension(
     name="libzim.wrapper",
     sources=["libzim/wrapper.pyx", "libzim/lib.cxx"],
     include_dirs=["libzim", LIBZIM_INCLUDE_DIR],
     libraries=["zim"],
     library_dirs=[LIBZIM_LIBRARY_DIR],
-    extra_compile_args=["-std=c++11", "-Wall", "-Wextra"],
+    extra_compile_args=EXTENSION_EXTRA_COMPILE_ARGS,
     language="c++",
     define_macros=[("CYTHON_TRACE", "1"), ("CYTHON_TRACE_NOGIL", "1")]
     if PROFILE

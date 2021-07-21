@@ -1,0 +1,90 @@
+name: Build python-libzim on Windows
+
+on: workflow_dispatch
+
+jobs:
+  build-libzim:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          repository: 'openzim/libzim'
+
+      - name: Setup python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+
+      - name: Install packages
+        run: |
+          choco install ninja
+      - name: Install python modules
+        run: pip3 install meson
+
+      - name: Compile
+        shell: cmd
+        run: .github\script\build_libzim.cmd
+
+      - name: Test
+        shell: cmd
+        run: |
+          cd build
+          ninja download_test_data
+          meson test --verbose
+      - uses: actions/upload-artifact@v2
+        with:
+          name: 'libzim-include'
+          path: 'include/zim'
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: 'zim_config.h'
+          path: 'build/include/zim/zim_config.h'
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: 'libzim.a'
+          path: 'build/src/libzim.a'
+
+  build-python-libzim:
+    runs-on: windows-latest
+    needs: build-libzim
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: libzim.a
+          path: lib/
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: libzim-include
+          path: "include/zim"
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: zim_config.h
+          path: 'include/zim'
+
+      - name: Setup python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+
+      - name: Build cython and sdist
+        run: |
+          pip install --upgrade "cython>=0.29.20,<3.0" setuptools pip wheel
+          python3 setup.py build_ext
+
+      - name: build wheel
+        run: python3 setup.py bdist_wheel
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: ./dist
