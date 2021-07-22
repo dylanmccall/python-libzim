@@ -47,7 +47,7 @@ LIBZIM_LIBRARY_DIR = 'lib'       # the libzim .so binary lib dir (containing lib
 if platform.system() == "Darwin":
     LIBZIM_DYLIB = "libzim.dylib"
 elif platform.system() == "Windows":
-    LIBZIM_DYLIB = "libzim-6.dll"
+    LIBZIM_DYLIB = "libzim.lib"
 else:
     LIBZIM_DYLIB = "libzim.so"
 
@@ -88,8 +88,8 @@ def get_long_description():
     return (BASE_DIR/'README.md').read_text()
 
 if platform.system() == "Windows":
-    # EXTENSION_EXTRA_COMPILE_ARGS = ["/std:c++14"]
-    EXTENSION_EXTRA_COMPILE_ARGS = ["-std=c++11"]
+    EXTENSION_EXTRA_COMPILE_ARGS = ["/std:c++14"]
+    # EXTENSION_EXTRA_COMPILE_ARGS = ["-std=c++11"]
 else:
     EXTENSION_EXTRA_COMPILE_ARGS = ["-std=c++11", "-Wall", "-Wextra"]
 
@@ -97,7 +97,7 @@ wrapper_extension = Extension(
     name = "libzim.wrapper",
     sources = ["libzim/wrapper.pyx", "libzim/lib.cxx"],
     include_dirs=["libzim", LIBZIM_INCLUDE_DIR],
-    libraries=['libzim-6'],
+    libraries=['libzim'],
     library_dirs=[LIBZIM_LIBRARY_DIR],
     extra_compile_args=EXTENSION_EXTRA_COMPILE_ARGS,
     language="c++",
