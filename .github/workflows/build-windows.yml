@@ -116,6 +116,7 @@ jobs:
 
       # Via https://stackoverflow.com/questions/9946322/how-to-generate-an-import-library-lib-file-from-a-dll
       - name: Generate libzim-6 library files
+        shell: cmd
         run: |
           cd lib
           echo LIBRARY LIBZIM6 > libzim-6.def
