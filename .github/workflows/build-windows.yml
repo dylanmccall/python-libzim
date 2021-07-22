@@ -118,8 +118,8 @@ jobs:
       - name: Generate libzim-6 library files
         shell: bash
         run: |
-          cd libs
-          echo LIBRARY SQLITE3 > libzim-6.def
+          cd lib
+          echo LIBRARY LIBZIM6 > libzim-6.def
           echo EXPORTS >> libzim-6.def
           for /f "skip=19 tokens=4" %A in ('dumpbin /exports libzim-6.dll') do echo %A >> libzim-6.def
           lib /def:libzim-6.def /out:libzim-6.lib /machine:x86
