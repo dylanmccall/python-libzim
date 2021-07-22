@@ -116,7 +116,7 @@ jobs:
 
       - name: Generate C extension
         run: |
-          python3 setup.py build_ext --compiler=mingw32
+          python3 setup.py build_ext
 
       - name: build wheel
         run: python3 setup.py bdist_wheel
